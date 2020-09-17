@@ -15,6 +15,7 @@
 //! A label widget.
 
 use crate::piet::{Color, PietText};
+use crate::text::LayoutMetrics;
 use crate::widget::prelude::*;
 use crate::{
     BoxConstraints, Data, FontDescriptor, KeyOrValue, LocalizedString, Point, Size, TextAlignment,
@@ -296,8 +297,19 @@ impl<T: Data> Label<T> {
         self.layout.draw(ctx, origin)
     }
 
+    /// Return the [`LayoutMetrics`] of the underlying [`TextLayout`] object.
+    ///
+    /// This is not meaningful until after [`layout`] has been called.
+    ///
+    /// [`LayoutMetrics`]: ../text/struct.LayoutMetrics.html
+    /// [`TextLayout`]: ../struct.TextLayout.html
+    /// [`layout`]: ../trait.Widget.html#tymethod.layout
+    pub fn layout_metrics(&self) -> LayoutMetrics {
+        self.layout.layout_metrics()
+    }
+
     fn rebuild_if_needed(&mut self, factory: &mut PietText, data: &T, env: &Env) {
-        if self.needs_rebuild {
+        if self.needs_rebuild || self.layout.needs_rebuild() {
             self.text.resolve(data, env);
             self.layout.set_text(self.text.display_text());
             self.layout.rebuild_if_needed(factory, env);
@@ -367,12 +379,16 @@ impl<T: Data> Widget<T> for Label<T> {
             _ => f64::INFINITY,
         };
 
-        self.rebuild_if_needed(&mut ctx.text(), data, env);
         self.layout.set_wrap_width(width);
+        self.rebuild_if_needed(&mut ctx.text(), data, env);
 
-        let mut text_size = self.layout.size();
-        text_size.width += 2. * LABEL_X_PADDING;
-        bc.constrain(text_size)
+        let text_metrics = self.layout.layout_metrics();
+
+        ctx.set_baseline_position(text_metrics.size.height - text_metrics.first_baseline);
+        bc.constrain(Size::new(
+            text_metrics.size.width + 2. * LABEL_X_PADDING,
+            text_metrics.size.height,
+        ))
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
