@@ -20,7 +20,7 @@ use crate::piet::{Color, FontFamily, FontStyle, FontWeight, TextAttribute as Pie
 use crate::{Env, FontDescriptor, KeyOrValue};
 
 /// A collection of spans of attributes of various kinds.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct AttributeSpans {
     family: SpanSet<FontFamily>,
     size: SpanSet<KeyOrValue<f64>>,
@@ -34,7 +34,7 @@ pub struct AttributeSpans {
 /// A set of spans for a given attribute.
 ///
 /// Invariant: the spans are sorted and non-overlapping.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 struct SpanSet<T> {
     spans: Vec<Span<T>>,
 }
@@ -107,7 +107,7 @@ impl AttributeSpans {
         }
     }
 
-    fn to_piet_attrs(&self, env: &Env) -> Vec<(Range<usize>, PietTextAttribute)> {
+    pub(crate) fn to_piet_attrs(&self, env: &Env) -> Vec<(Range<usize>, PietTextAttribute)> {
         let mut items = Vec::new();
         for Span { range, attr } in self.font_descriptor.iter() {
             let font = attr.resolve(env);
@@ -314,6 +314,12 @@ impl Attribute {
     }
 }
 
+impl<T> Default for SpanSet<T> {
+    fn default() -> Self {
+        SpanSet { spans: Vec::new() }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -346,16 +352,13 @@ mod tests {
         deletion.edit(6..14, 0);
         assert_eq!(
             &deletion.spans,
-            &vec![
-                Span::new(0..2, 1),
-                Span::new(6..8, 3),
-                Span::new(12..14, 4)
-            ]
+            &vec![Span::new(0..2, 1), Span::new(6..8, 3), Span::new(12..14, 4)]
         );
 
         let mut insertion = spans.clone();
         insertion.edit(10..10, 2);
-        assert_eq!(&insertion.spans,
+        assert_eq!(
+            &insertion.spans,
             &vec![
                 Span::new(0..2, 1),
                 Span::new(8..10, 2),
