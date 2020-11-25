@@ -639,6 +639,7 @@ impl WndProc for MyWndProc {
 
                     let handle = self.handle.borrow().to_owned();
                     state.handler.connect(&handle.into());
+                    state.rebuild_render_target(&self.d2d_factory, scale);
                 }
                 Some(0)
             }
